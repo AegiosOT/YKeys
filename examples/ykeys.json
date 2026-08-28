@@ -1,0 +1,36 @@
+{
+  "hotkeys": {
+    "alt+h": "ytile focus left",
+    "alt+j": "ytile focus down",
+    "alt+k": "ytile focus up",
+    "alt+l": "ytile focus right",
+
+    "alt+shift+h": "ytile move left",
+    "alt+shift+j": "ytile move down",
+    "alt+shift+k": "ytile move up",
+    "alt+shift+l": "ytile move right",
+
+    "alt+1": "ytile workspace 1",
+    "alt+2": "ytile workspace 2",
+    "alt+3": "ytile workspace 3",
+    "alt+4": "ytile workspace 4",
+    "alt+shift+1": "ytile send 1",
+    "alt+shift+2": "ytile send 2",
+    "alt+shift+3": "ytile send 3",
+    "alt+shift+4": "ytile send 4",
+
+    "alt+plus": "ytile resize right",
+    "alt+minus": "ytile resize right -50",
+    "alt+shift+plus": "ytile resize down",
+    "alt+shift+minus": "ytile resize down -50",
+
+    "alt+t": "ytile float",
+    "alt+b": "ytile layout bsp",
+    "alt+c": "ytile layout columns",
+    "alt+r": "ytile retile",
+    "alt+p": "ytile pause",
+    "alt+shift+p": "ytile resume",
+
+    "alt+enter": "wt"
+  }
+}

@@ -1,0 +1,21 @@
+// Global hotkeys
+RegisterHotKey
+UnregisterHotKey
+WM_HOTKEY
+WM_APP
+HOT_KEY_MODIFIERS
+VIRTUAL_KEY
+
+// Hidden window + message pump
+GetMessageW
+TranslateMessage
+DispatchMessageW
+PostThreadMessageW
+GetCurrentThreadId
+RegisterClassW
+UnregisterClassW
+CreateWindowExW
+DestroyWindow
+DefWindowProcW
+GetModuleHandleW
+WM_QUIT

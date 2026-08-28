@@ -1,0 +1,30 @@
+<Project>
+
+  <PropertyGroup>
+    <!-- OS floor matches YTile: Windows 10 2004+. -->
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PlatformTarget>x64</PlatformTarget>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- AOT is the shipping configuration; analyzers keep dev (JIT) builds honest. -->
+    <IsAotCompatible>true</IsAotCompatible>
+    <EnableAotAnalyzer>true</EnableAotAnalyzer>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!-- PE version resources. Release CI passes -p:Version=X.Y.Z from the tag;
+         SignPath's artifact configuration restricts signing on the product
+         name, so Product must stay set and match it. -->
+    <Product>YKeys</Product>
+    <Company>AegiosOT</Company>
+    <Copyright>© AegiosOT — GPL-3.0</Copyright>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- [assembly: DisableRuntimeMarshalling] everywhere, same AOT guardrail as YTile. -->
+    <Compile Include="$(MSBuildThisFileDirectory)build\AssemblyAttributes.cs" Link="AssemblyAttributes.cs" />
+  </ItemGroup>
+
+</Project>
