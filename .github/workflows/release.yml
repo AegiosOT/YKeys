@@ -11,16 +11,22 @@ on:
 
 permissions:
   contents: write
+  # GitHub OIDC token for the Azure signing login — no stored secrets.
+  id-token: write
 
 jobs:
   release:
     runs-on: windows-latest
+    # The 'release' environment name is baked into the OIDC trust: the signing
+    # managed identity's federated credential only accepts tokens minted for
+    # repo:AegiosOT/YKeys:environment:release.
+    environment: release
     env:
       TAG: ${{ github.event.inputs.tag || github.ref_name }}
-      # Empty until the SignPath project exists and the secret is added; every
-      # signing step is skipped while it is empty, so releases ship unsigned
-      # rather than failing.
-      SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+      # Empty until the Azure signing variables are configured on the repo;
+      # every signing step is skipped while it is empty, so releases ship
+      # unsigned rather than failing.
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -34,9 +40,8 @@ jobs:
       - name: Test
         run: dotnet test tests/YKeys.Tests -c Release
 
-      # -p:Version stamps the PE version resource from the tag; SignPath's
-      # artifact configuration restricts signing on the PE product name
-      # (Product=YKeys), and the smoke test below enforces the version.
+      # -p:Version stamps the PE version resource from the tag; the smoke test
+      # below enforces it, and the signed binary carries it as metadata.
       - name: Publish ykeys (NativeAOT)
         run: dotnet publish src/YKeys -r win-x64 -c Release -o publish -p:Version=$($env:TAG.TrimStart('v'))
 
@@ -54,48 +59,47 @@ jobs:
             throw "ykeys.exe reports '$reported' but the tag says 'ykeys $version' — bump the Version const before tagging."
           }
           # The PE version resource must match too — this check is the only
-          # gate enforcing it (SignPath pins only the product name).
+          # gate enforcing it.
           $pv = (Get-Item "./publish/ykeys.exe").VersionInfo.ProductVersion
           if ($pv -ne $version -and -not $pv.StartsWith("$version+")) {
             throw "ykeys.exe PE ProductVersion is '$pv', expected '$version' — was -p:Version dropped from the publish step?"
           }
 
-      # --- Code signing (SignPath Foundation) -------------------------------
-      # Signs ykeys.exe in place before the zip and checksums see it. The
-      # submit step blocks until the signing request is manually approved at
-      # app.signpath.io.
-      - name: Upload unsigned binary
-        if: env.SIGNPATH_API_TOKEN != ''
-        id: unsigned
-        uses: actions/upload-artifact@v7
+      # --- Code signing (Azure Artifact Signing) ----------------------------
+      # Signs ykeys.exe in place before the zip and checksums see it. Fully
+      # automatic — OIDC login as a managed identity, no secrets, no approval
+      # pause. Setup: packaging/signing/README.md (shared with YTile).
+      - name: Azure login (OIDC)
+        if: env.AZURE_CLIENT_ID != ''
+        uses: azure/login@v3
         with:
-          name: unsigned-binary
-          path: publish/ykeys.exe
-          retention-days: 1
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Sign binary (SignPath)
-        if: env.SIGNPATH_API_TOKEN != ''
-        uses: signpath/github-action-submit-signing-request@v2
+      - name: Sign binary (Artifact Signing)
+        if: env.AZURE_CLIENT_ID != ''
+        uses: azure/artifact-signing-action@v2
         with:
-          api-token: ${{ env.SIGNPATH_API_TOKEN }}
-          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
-          project-slug: ykeys
-          signing-policy-slug: release-signing
-          github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
-          wait-for-completion: true
-          wait-for-completion-timeout-in-seconds: '3600'
-          output-artifact-directory: publish/signed
+          endpoint: https://eus.codesigning.azure.net/
+          signing-account-name: aegiosot
+          certificate-profile-name: release-signing
+          files-folder: ${{ github.workspace }}\publish
+          files-folder-filter: exe
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
 
-      - name: Replace binary with signed one
-        if: env.SIGNPATH_API_TOKEN != ''
+      - name: Verify signature
+        if: env.AZURE_CLIENT_ID != ''
         run: |
-          Copy-Item publish/signed/ykeys.exe -Destination publish -Force
           $version = $env:TAG.TrimStart('v')
           $sig = Get-AuthenticodeSignature publish/ykeys.exe
           if ($sig.Status -ne 'Valid') {
             throw "ykeys.exe signature status is $($sig.Status)"
           }
           Write-Host "ykeys.exe signed by: $($sig.SignerCertificate.Subject)"
+          # Signing must not have broken the binary.
           $reported = (& "./publish/ykeys.exe" --version) -join ''
           if ($LASTEXITCODE -ne 0 -or $reported -ne "ykeys $version") {
             throw "ykeys.exe failed to run after signing (reported '$reported')"

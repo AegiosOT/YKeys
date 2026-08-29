@@ -61,14 +61,11 @@ dotnet publish src/YKeys -r win-x64 -c Release -o publish   # NativeAOT ykeys.ex
 
 ## Code signing
 
-Free code signing provided by [SignPath.io](https://about.signpath.io/),
-certificate by [SignPath Foundation](https://signpath.org/), once the project
-is onboarded alongside YTile.
-
-- Committers and reviewers: [AegiosOT](https://github.com/AegiosOT). Pull
-  requests from outside contributors are reviewed by a committer before merging.
-- Approvers: [AegiosOT](https://github.com/AegiosOT) — each release's signing
-  request is approved manually.
+Release binaries are Authenticode-signed by CI via
+[Azure Artifact Signing](https://learn.microsoft.com/en-us/azure/artifact-signing/),
+sharing the [YTile](https://github.com/AegiosOT/YTile) suite's signing setup —
+details in [packaging/signing](packaging/signing/README.md). Releases up to
+v0.1.1 predate the signing setup and are unsigned.
 
 This program will not transfer any information to other networked systems
 unless specifically requested by the user or the person installing or
