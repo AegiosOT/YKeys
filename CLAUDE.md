@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-YKeys is a Windows hotkey daemon (C#, .NET 10, NativeAOT): it reads `~/.config/ykeys/ykeys.json`, registers its chord→command map as global hotkeys via `RegisterHotKey`, and runs each command as a detached process when pressed. Companion to YTile (`ytile start` launches `ykeys --log`), but standalone. GPL-3.0.
+YKeys is a Windows hotkey daemon (C#, .NET 10, NativeAOT): it reads `~/.config/ykeys/ykeys.json`, registers its chord→command map as global hotkeys via `RegisterHotKey`, and runs each command as a detached process when pressed. Companion to YTile (`ytile start` launches `ykeys --log`), but standalone. Apache-2.0.
 
 ## Commands
 
