@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SignPath artifact configuration for YKeys releases.
+
+     The release workflow uploads a GitHub Actions artifact containing the
+     single NativeAOT binary; upload-artifact wraps it in a zip, hence the
+     zip-file root. Paste this XML as the DEFAULT artifact configuration of
+     the SignPath project (slug: ykeys) — the workflow does not pass an
+     explicit artifact-configuration-slug.
+
+     The product-name restriction pins what this project is allowed to sign
+     (Directory.Build.props sets Product=YKeys). There is deliberately no
+     product-version restriction: the PE ProductVersion carries a +<git-sha>
+     suffix that an exact match would reject; the release smoke test enforces
+     the version instead. -->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <zip-file>
+    <pe-file path="ykeys.exe" product-name="YKeys">
+      <authenticode-sign/>
+    </pe-file>
+  </zip-file>
+</artifact-configuration>
