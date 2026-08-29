@@ -18,7 +18,7 @@
          signed binaries carry these as their published metadata. -->
     <Product>YKeys</Product>
     <Company>AegiosOT</Company>
-    <Copyright>© AegiosOT — MIT</Copyright>
+    <Copyright>© AegiosOT — GPL-3.0</Copyright>
   </PropertyGroup>
 
   <ItemGroup>
