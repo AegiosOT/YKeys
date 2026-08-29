@@ -73,4 +73,4 @@ operating it. (It only runs the commands you bind, locally.)
 
 ## License
 
-Apache-2.0 — see [LICENSE](LICENSE).
+GPL-3.0 — see [LICENSE](LICENSE).
