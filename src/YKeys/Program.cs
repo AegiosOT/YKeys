@@ -2,7 +2,7 @@ namespace YKeys;
 
 internal static class Program
 {
-    private const string Version = "0.1.0";
+    private const string Version = "0.1.1";
 
     private static int Main(string[] args)
     {
@@ -30,6 +30,17 @@ internal static class Program
             return 0;
         }
 
+        // The instance check must precede the log redirect: the first instance
+        // holds the log write handle, so a second --log instance would die on
+        // the FileStream open before ever reaching this message.
+        // Semaphore, not Mutex: no thread affinity, released from any thread.
+        using var instanceLock = new Semaphore(1, 1, @"Local\ykeys-instance", out _);
+        if (!instanceLock.WaitOne(0))
+        {
+            Console.Error.WriteLine("ykeys: another instance is already running.");
+            return 1;
+        }
+
         // --log: headless mode — everything goes to a file instead of the
         // hidden console. Truncates per session; FileShare.Read allows tailing.
         if (args.Contains("--log"))
@@ -43,14 +54,6 @@ internal static class Program
             { AutoFlush = true };
             Console.SetOut(log);
             Console.SetError(log);
-        }
-
-        // Semaphore, not Mutex: no thread affinity, released from any thread.
-        using var instanceLock = new Semaphore(1, 1, @"Local\ykeys-instance", out _);
-        if (!instanceLock.WaitOne(0))
-        {
-            Console.Error.WriteLine("ykeys: another instance is already running.");
-            return 1;
         }
 
         YKeysConfig config = YKeysConfig.Load(null, out string? configError);
@@ -104,6 +107,9 @@ internal static class Program
         FileSystemEventHandler onChange = (_, _) => { debounce.Stop(); debounce.Start(); };
         watcher.Changed += onChange;
         watcher.Created += onChange;
+        // Deletion must unregister everything, matching what a fresh start
+        // with no config file would do.
+        watcher.Deleted += onChange;
         watcher.Renamed += (_, _) => { debounce.Stop(); debounce.Start(); };
         watcher.EnableRaisingEvents = true;
         return watcher;

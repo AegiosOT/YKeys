@@ -38,7 +38,7 @@ internal sealed class YKeysConfig
         {
             dto = JsonSerializer.Deserialize(File.ReadAllText(path), ConfigJsonContext.Default.ConfigDto);
         }
-        catch (Exception ex) when (ex is JsonException or IOException)
+        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
         {
             error = $"{path}: {ex.Message}";
             return new YKeysConfig();
