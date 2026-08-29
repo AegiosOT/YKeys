@@ -34,6 +34,6 @@ Win32 interop is via **CsWin32** source generation (`PInvoke.*`, generated from 
 - **AOT is the shipping configuration** (`PublishAot=true`, `OptimizationPreference=Speed` — hotkey latency is the product). AOT/trim analyzers run on dev builds; keep code reflection-free and marshalling-free (`DisableRuntimeMarshalling` is applied assembly-wide from `build/AssemblyAttributes.cs`).
 - Central package management: versions live in `Directory.Packages.props`; shared build settings in `Directory.Build.props`.
 - The version lives in three places that must agree at release time: the `Version` const in `Program.cs`, the git tag `vX.Y.Z`, and `-p:Version` stamped by release.yml — the release smoke test fails if they diverge. Bump the const before tagging.
-- `Product=YKeys` in Directory.Build.props must not change: SignPath's artifact configuration restricts signing on the PE product name (see `packaging/signpath/README.md`).
+- Release binaries are signed via Azure Artifact Signing (OIDC, `release` environment — see `packaging/signing/README.md`); keep `Product`/`Company` in Directory.Build.props intact, they are the signed binaries' published metadata.
 - Tests see internals via `InternalsVisibleTo`; everything in the app is `internal`.
 - User-facing failure handling is "log and keep running": config errors, registration conflicts (chord owned by another program), and spawn failures each produce a log line and are skipped, never fatal.
