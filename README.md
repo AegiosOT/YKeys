@@ -73,4 +73,4 @@ operating it. (It only runs the commands you bind, locally.)
 
 ## License
 
-GPL-3.0 — see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).
