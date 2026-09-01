@@ -2,7 +2,7 @@ namespace YKeys;
 
 internal static class Program
 {
-    private const string Version = "0.1.3-dev";
+    private const string Version = "0.1.3";
 
     private static int Main(string[] args)
     {
