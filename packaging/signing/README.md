@@ -5,7 +5,10 @@ the YTile suite's signing setup: same signing account (`aegiosot`, East US,
 endpoint `https://eus.codesigning.azure.net/`), same certificate profile
 (`release-signing`), same managed identity (`ytile-release-signer`), which
 carries a federated credential for this repo's **`release` environment**
-(`repo:AegiosOT/YKeys:environment:release`). Auth is GitHub OIDC — no stored
+(`repo:AegiosOT@2933384/YKeys@1350104222:environment:release` — the immutable
+ID form; the classic `repo:AegiosOT/YKeys:...` spelling is rejected with
+`AADSTS700213`). Binaries are signed under the **NineFiveB** organization
+identity. Auth is GitHub OIDC — no stored
 secrets; the repo only holds three plain variables (`AZURE_CLIENT_ID`,
 `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`), and the signing steps are
 skipped while `AZURE_CLIENT_ID` is absent.
