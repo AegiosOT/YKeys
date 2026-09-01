@@ -2,7 +2,7 @@ namespace YKeys;
 
 internal static class Program
 {
-    private const string Version = "0.1.4-dev";
+    private const string Version = "0.1.4";
 
     private static int Main(string[] args)
     {
@@ -47,6 +47,17 @@ internal static class Program
             return 0;
         }
 
+        // A mistyped flag must not start the daemon as if nothing happened —
+        // the user would be waiting for behaviour they never actually asked for.
+        string[] known = ["--log", "--version", "-V", "--help", "-h"];
+        string[] unknown = [.. args.Where(a => !known.Contains(a))];
+        if (unknown.Length > 0)
+        {
+            Console.Error.WriteLine($"ykeys: unknown argument(s): {string.Join(' ', unknown)}");
+            Console.Error.WriteLine("try: ykeys --help");
+            return 2;
+        }
+
         // The instance check must precede the log redirect: the first instance
         // holds the log write handle, so a second --log instance would die on
         // the FileStream open before ever reaching this message.
@@ -74,15 +85,15 @@ internal static class Program
         }
 
         YKeysConfig config = YKeysConfig.Load(null, out string? configError);
-        Console.WriteLine(File.Exists(YKeysConfig.DefaultPath)
+        Log(File.Exists(YKeysConfig.DefaultPath)
             ? $"config: {YKeysConfig.DefaultPath}"
             : $"config: no file at {YKeysConfig.DefaultPath} — no hotkeys until one exists");
         if (configError is not null)
         {
-            Console.WriteLine($"config problems: {configError}");
+            Log($"config problems: {configError}");
         }
 
-        Console.WriteLine($"ykeys {Version} — Ctrl+C to exit.");
+        Log($"ykeys {Version} — Ctrl+C to exit.");
         HotkeyListener.Start(config.Hotkeys);
 
         using FileSystemWatcher watcher = WatchConfig();
@@ -110,8 +121,19 @@ internal static class Program
         var debounce = new System.Timers.Timer(300) { AutoReset = false };
         debounce.Elapsed += (_, _) =>
         {
-            YKeysConfig config = YKeysConfig.Load(null, out string? error);
-            Console.WriteLine(error is null
+            YKeysConfig config = YKeysConfig.Load(null, out string? error, out bool fileLevelFailure);
+
+            // A half-saved file or a stray comma must not unregister everything
+            // the user is mid-keystroke on. Keep the working set and wait for
+            // the next save. Deleting the file is different — that is a real
+            // instruction, and File.Exists tells the two apart.
+            if (fileLevelFailure && File.Exists(YKeysConfig.DefaultPath))
+            {
+                Log($"config NOT reloaded, keeping the {HotkeyListener.RegisteredCount} live binding(s): {error}");
+                return;
+            }
+
+            Log(error is null
                 ? $"config reloaded ({config.Hotkeys.Count} hotkeys)"
                 : $"config reloaded with problems: {error}");
             HotkeyListener.Apply(config.Hotkeys);
@@ -128,7 +150,27 @@ internal static class Program
         // with no config file would do.
         watcher.Deleted += onChange;
         watcher.Renamed += (_, _) => { debounce.Stop(); debounce.Start(); };
+        // Without this the watcher can die (buffer overflow, the directory going
+        // away) and hot-reload silently stops working forever. Say so, and try
+        // to bring it back.
+        watcher.Error += (_, e) =>
+        {
+            Log($"config watcher failed: {e.GetException().Message} — restarting it");
+            try
+            {
+                watcher!.EnableRaisingEvents = false;
+                watcher.EnableRaisingEvents = true;
+            }
+            catch (Exception ex)
+            {
+                Log($"config watcher could not be restarted: {ex.Message} — edits need a ykeys restart");
+            }
+        };
         watcher.EnableRaisingEvents = true;
         return watcher;
     }
+
+    /// <summary>One timestamped writer for the whole daemon: a log that mixes
+    /// stamped and unstamped lines is hard to correlate with anything else.</summary>
+    internal static void Log(string message) => Console.WriteLine($"{DateTime.Now:MM-dd HH:mm:ss.fff} {message}");
 }

@@ -3,9 +3,11 @@ using System.Diagnostics;
 namespace YKeys;
 
 /// <summary>
-/// Runs a binding's command line as a detached process — no shell in between,
-/// so there is no persistent shell state and nothing to respawn. CreateProcess
-/// resolves the executable against PATH; quote the path if it has spaces.
+/// Runs a binding's command line as a detached process. There is no shell in
+/// between, so no persistent shell state and nothing to respawn — but a command
+/// may still ask for one explicitly (<c>powershell -NoProfile -Command "a; b"</c>
+/// passes through the quote-aware split unchanged). Quote the program path if it
+/// contains spaces.
 /// </summary>
 internal static class CommandRunner
 {
@@ -15,6 +17,7 @@ internal static class CommandRunner
         Task.Run(() =>
         {
             (string file, string args) = Split(commandLine);
+            file = Resolve(file);
             try
             {
                 using Process? proc = Process.Start(new ProcessStartInfo
@@ -37,6 +40,25 @@ internal static class CommandRunner
         });
     }
 
+    /// <summary>
+    /// Prefer a sibling executable over whatever PATH resolves to. ykeys ships
+    /// beside ytile.exe, so suite bindings keep working when PATH is stale or
+    /// the install moved — the failure mode that silently kills every binding
+    /// at once and looks like the daemon is broken.
+    /// </summary>
+    internal static string Resolve(string file)
+    {
+        // Only bare names: an explicit path is the user being specific.
+        if (file.Length == 0 || file.Contains('\\') || file.Contains('/') || file.Contains(':'))
+        {
+            return file;
+        }
+
+        string name = file.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? file : file + ".exe";
+        string sibling = Path.Combine(AppContext.BaseDirectory, name);
+        return File.Exists(sibling) ? sibling : file;
+    }
+
     /// <summary>First token (quote-aware) is the program; the rest is passed through verbatim.</summary>
     internal static (string File, string Args) Split(string commandLine)
     {
@@ -56,5 +78,5 @@ internal static class CommandRunner
         return space < 0 ? (trimmed, string.Empty) : (trimmed[..space], trimmed[(space + 1)..].TrimStart());
     }
 
-    private static void Log(string message) => Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} {message}");
+    private static void Log(string message) => Program.Log(message);
 }

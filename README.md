@@ -22,11 +22,28 @@ it is a standalone tool: any chord can run any program.
 ```
 
 Chords are `modifier+...+key`: modifiers `alt`, `ctrl`, `shift`, `win`; keys
-are letters, digits, `f1`-`f24` (`f12` is debugger-reserved), arrows, and
-named keys like `space`, `enter`, `minus`, `plus` (punctuation names follow
-US key positions). Commands run as detached processes with no shell in
-between — quote the program path if it contains spaces. Config changes are
-picked up automatically; no restart needed.
+are letters, digits, `f1`-`f24` (`f12` is debugger-reserved), arrows, numpad
+keys (`numpad1`, `numpad_add`), and named punctuation like `space`, `enter`,
+`minus`, `plus` — the `oem_plus`/`oem_1` spellings used by whkd and komorebi
+configs work too, so those translate over unchanged.
+
+Comments and trailing commas are allowed, which makes parking a binding the
+obvious two-second gesture:
+
+```jsonc
+{
+  "hotkeys": {
+    // "win+q": "ytile float",     <- handed back to Windows for now
+    "alt+1": "ytile workspace 1",
+  }
+}
+```
+
+Commands run as detached processes. There is no shell in the way, but you can
+ask for one — `"powershell -NoProfile -Command \"a; b\""` works fine. Quote the
+program path if it contains spaces. Config changes are picked up automatically;
+no restart needed, and a half-saved or malformed file leaves your existing
+bindings alone rather than unregistering everything.
 
 Hotkeys are registered with `RegisterHotKey`, so they keep working even while
 an elevated window has focus, and a chord some other program already owns is

@@ -60,6 +60,29 @@ public sealed class HotkeyParserTests
     }
 
     [TestMethod]
+    public void Parse_AcceptsOemSpellingsFromWhkdConfigs()
+    {
+        // YTile ships a whkdrc using oem_plus/oem_minus; both formats must agree
+        // or translating between them silently drops bindings.
+        Assert.AreEqual(Parse("alt+plus").Vk, Parse("alt+oem_plus").Vk);
+        Assert.AreEqual(Parse("alt+minus").Vk, Parse("alt+oem_minus").Vk);
+        Assert.AreEqual(Parse("alt+semicolon").Vk, Parse("alt+oem_1").Vk);
+        Assert.AreEqual(Parse("alt+lbracket").Vk, Parse("alt+oem_4").Vk);
+        Assert.AreEqual(Parse("alt+quote").Vk, Parse("alt+oem_7").Vk);
+        Assert.AreEqual((uint)VIRTUAL_KEY.VK_OEM_PLUS, Parse("alt+shift+oem_plus").Vk);
+    }
+
+    [TestMethod]
+    public void Parse_NumpadKeysAreDistinctFromTheNumberRow()
+    {
+        Assert.AreEqual((uint)VIRTUAL_KEY.VK_NUMPAD1, Parse("alt+numpad1").Vk);
+        Assert.AreNotEqual(Parse("alt+1").Vk, Parse("alt+numpad1").Vk);
+        Assert.AreEqual((uint)VIRTUAL_KEY.VK_ADD, Parse("alt+numpad_add").Vk);
+        Assert.AreEqual((uint)VIRTUAL_KEY.VK_DIVIDE, Parse("alt+numpad_divide").Vk);
+        Assert.AreEqual((uint)VIRTUAL_KEY.VK_DECIMAL, Parse("alt+numpad_dot").Vk);
+    }
+
+    [TestMethod]
     public void Parse_RejectsBadChords()
     {
         StringAssert.Contains(Reject("alt+banana"), "unknown key");

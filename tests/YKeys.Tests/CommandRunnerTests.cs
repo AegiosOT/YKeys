@@ -21,6 +21,35 @@ public sealed class CommandRunnerTests
     }
 
     [TestMethod]
+    public void Resolve_PrefersASiblingExecutableOverPath()
+    {
+        // ykeys ships beside ytile.exe, so suite bindings must not depend on
+        // PATH being current — a stale PATH silently kills every binding at once.
+        string sibling = Path.Combine(AppContext.BaseDirectory, "ytile-resolve-probe.exe");
+        File.WriteAllText(sibling, string.Empty);
+        try
+        {
+            Assert.AreEqual(sibling, CommandRunner.Resolve("ytile-resolve-probe"));
+            Assert.AreEqual(sibling, CommandRunner.Resolve("ytile-resolve-probe.exe"));
+        }
+        finally
+        {
+            File.Delete(sibling);
+        }
+    }
+
+    [TestMethod]
+    public void Resolve_LeavesPathsAndUnknownNamesAlone()
+    {
+        // An explicit path is the user being specific — never second-guess it.
+        Assert.AreEqual(@"C:\Windows\notepad.exe", CommandRunner.Resolve(@"C:\Windows\notepad.exe"));
+        Assert.AreEqual(@"sub\tool.exe", CommandRunner.Resolve(@"sub\tool.exe"));
+        // No sibling by that name: fall through to PATH resolution unchanged.
+        Assert.AreEqual("definitely-not-a-sibling", CommandRunner.Resolve("definitely-not-a-sibling"));
+        Assert.AreEqual("", CommandRunner.Resolve(""));
+    }
+
+    [TestMethod]
     public void Split_UnterminatedQuotePassesThrough()
     {
         (string file, string args) = CommandRunner.Split("\"broken");

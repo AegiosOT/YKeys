@@ -69,6 +69,98 @@ public sealed class ConfigTests
     }
 
     [TestMethod]
+    public void Load_MissingHotkeysObject_IsAnError()
+    {
+        // The worst failure shape in the daemon: a typo in the key name used to
+        // load as zero bindings and report success, so nothing worked and
+        // nothing said why.
+        string path = Path.Combine(Path.GetTempPath(), $"ykeys-test-{Guid.NewGuid():N}.json");
+        File.WriteAllText(path, """{ "hotkey": { "alt+1": "ytile workspace 1" } }""");
+        try
+        {
+            YKeysConfig config = YKeysConfig.Load(path, out string? error);
+            Assert.AreEqual(0, config.Hotkeys.Count);
+            Assert.IsNotNull(error);
+            StringAssert.Contains(error, "no \"hotkeys\" object");
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [TestMethod]
+    public void Load_EmptyHotkeysObject_IsNotAnError()
+    {
+        // Deliberately empty is a legitimate state — only a MISSING key is suspect.
+        string path = Path.Combine(Path.GetTempPath(), $"ykeys-test-{Guid.NewGuid():N}.json");
+        File.WriteAllText(path, """{ "hotkeys": { } }""");
+        try
+        {
+            YKeysConfig config = YKeysConfig.Load(path, out string? error);
+            Assert.AreEqual(0, config.Hotkeys.Count);
+            Assert.IsNull(error);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [TestMethod]
+    public void Load_AcceptsCommentsAndTrailingCommas()
+    {
+        string path = Path.Combine(Path.GetTempPath(), $"ykeys-test-{Guid.NewGuid():N}.json");
+        File.WriteAllText(path,
+            """
+            {
+              // parked until I decide where it goes
+              // "alt+q": "ytile float",
+              "hotkeys": {
+                "alt+1": "ytile workspace 1", /* inline */
+                "alt+2": "ytile workspace 2",
+              }
+            }
+            """);
+        try
+        {
+            YKeysConfig config = YKeysConfig.Load(path, out string? error);
+            Assert.IsNull(error);
+            Assert.AreEqual(2, config.Hotkeys.Count);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [TestMethod]
+    public void Load_FileLevelFailure_IsDistinguishedFromBadBindings()
+    {
+        // A broken file must be recoverable-by-keeping-what-we-have; a merely
+        // bad binding must not be, or one typo would strand the good ones.
+        string broken = Path.Combine(Path.GetTempPath(), $"ykeys-test-{Guid.NewGuid():N}.json");
+        File.WriteAllText(broken, "{ not json");
+        string badBinding = Path.Combine(Path.GetTempPath(), $"ykeys-test-{Guid.NewGuid():N}.json");
+        File.WriteAllText(badBinding, """{ "hotkeys": { "alt+banana": "x", "alt+1": "ytile workspace 1" } }""");
+        try
+        {
+            YKeysConfig.Load(broken, out _, out bool brokenIsFileLevel);
+            Assert.IsTrue(brokenIsFileLevel);
+
+            YKeysConfig ok = YKeysConfig.Load(badBinding, out string? err, out bool bindingIsFileLevel);
+            Assert.IsFalse(bindingIsFileLevel);
+            Assert.IsNotNull(err);
+            Assert.AreEqual(1, ok.Hotkeys.Count, "the good binding must survive a bad sibling");
+        }
+        finally
+        {
+            File.Delete(broken);
+            File.Delete(badBinding);
+        }
+    }
+
+    [TestMethod]
     public void Load_BadJson_FallsBackToEmptyWithError()
     {
         string path = Path.Combine(Path.GetTempPath(), $"ykeys-test-{Guid.NewGuid():N}.json");

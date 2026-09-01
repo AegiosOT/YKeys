@@ -114,6 +114,7 @@ internal static unsafe class HotkeyListener
 
         UnregisterAll(hwnd);
         int registered = 0;
+        var skipped = new List<string>();
         foreach (HotkeyBinding binding in bindings)
         {
             // Application hotkey ids must stay <= 0xBFFF.
@@ -131,13 +132,22 @@ internal static unsafe class HotkeyListener
             else
             {
                 int err = Marshal.GetLastPInvokeError();
+                skipped.Add(binding.Chord);
+                // Windows offers no way to ask who owns a hotkey — RegisterHotKey
+                // has no query, and the table is not enumerable from user mode.
+                // So name the chord, admit we cannot say who took it, and point
+                // at the usual suspects in the order they actually turn up.
                 Log(err == ErrorHotkeyAlreadyRegistered
-                    ? $"hotkey '{binding.Chord}' is taken by another program (whkd? Windows itself?) — skipped"
+                    ? $"hotkey '{binding.Chord}' is already owned by another program — skipped. "
+                    + "Windows cannot say which; the usual causes are GPU and game overlays "
+                    + "(NVIDIA, AMD, Steam, Discord), vendor utilities, and Windows' own Win+ combos"
                     : $"hotkey '{binding.Chord}' failed to register (error {err})");
             }
         }
 
-        Log($"hotkeys: {registered}/{bindings.Count} registered");
+        Log(skipped.Count == 0
+            ? $"hotkeys: {registered}/{bindings.Count} registered"
+            : $"hotkeys: {registered}/{bindings.Count} registered — skipped: {string.Join(", ", skipped)}");
     }
 
     private static void UnregisterAll(HWND hwnd)
@@ -156,6 +166,11 @@ internal static unsafe class HotkeyListener
         {
             if (msg == PInvoke.WM_HOTKEY && s_registered.TryGetValue((int)wParam.Value, out HotkeyBinding? binding))
             {
+                // Without this the log cannot tell "never registered" from "the
+                // OS gave the chord to someone else" from "it ran and the
+                // command did nothing" — the ambiguity behind every hotkey
+                // mystery worth debugging.
+                Log($"hotkey '{binding.Chord}' -> {binding.CommandLine}");
                 CommandRunner.Run(binding.Chord, binding.CommandLine);
             }
         }
@@ -167,5 +182,9 @@ internal static unsafe class HotkeyListener
         return PInvoke.DefWindowProc(hwnd, msg, wParam, lParam);
     }
 
-    private static void Log(string message) => Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} {message}");
+    /// <summary>How many chords are live right now — reported when a failed
+    /// reload leaves the previous set in place.</summary>
+    public static int RegisteredCount => s_registered.Count;
+
+    private static void Log(string message) => Program.Log(message);
 }
