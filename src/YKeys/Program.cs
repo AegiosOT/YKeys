@@ -12,6 +12,12 @@ internal static class Program
             return 0;
         }
 
+        // One-shot verbs run and exit; they never start the hotkey daemon.
+        if (args.Length > 0 && args[0] == "shell-hotkeys")
+        {
+            return ShellHotkeys.Run(args[1..]);
+        }
+
         if (args.Contains("--help") || args.Contains("-h"))
         {
             Console.WriteLine(
@@ -19,6 +25,7 @@ internal static class Program
                 ykeys {Version} — hotkey daemon for Windows (companion to YTile)
 
                 usage: ykeys [--log]
+                       ykeys shell-hotkeys <status|disable|restore> [LETTERS] [--restart-shell]
 
                 Reads ~/.config/ykeys/ykeys.json and registers its "hotkeys" map as
                 global hotkeys; each binding runs its command line when pressed.
@@ -26,6 +33,16 @@ internal static class Program
 
                   --log    write output to %LOCALAPPDATA%\ykeys\ykeys.log instead
                            of the console (used when launched by `ytile start`)
+
+                Windows keeps several Win+<letter> chords for itself, so binding
+                them here is refused until they are handed back:
+
+                  ykeys shell-hotkeys status     what Windows suppresses, and what is free
+                  ykeys shell-hotkeys disable    hand back the win+ chords in your config
+                  ykeys shell-hotkeys restore    give them to Windows again
+
+                That writes a per-user registry setting and takes effect when the
+                shell restarts; the daemon itself never touches it.
                 """);
             return 0;
         }

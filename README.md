@@ -32,6 +32,31 @@ Hotkeys are registered with `RegisterHotKey`, so they keep working even while
 an elevated window has focus, and a chord some other program already owns is
 skipped with a log line naming it rather than silently swallowed.
 
+## Windows keeps some chords for itself
+
+`Win+Q`, `Win+E`, `Win+R` and friends belong to the shell, and YKeys will not
+steal a chord another program claimed first — those bindings are simply
+refused. Windows can be told to give the `Win+`*letter* ones back:
+
+```
+ykeys shell-hotkeys status     # what Windows suppresses, what is ours, what is actually free
+ykeys shell-hotkeys disable    # hand back the win+ chords in your config
+ykeys shell-hotkeys restore    # give them to Windows again
+```
+
+`disable` with no argument derives the letters from your own `win+` bindings;
+name them explicitly (`disable QRE`) to override. It writes a per-user registry
+value, records exactly which letters it added, and `restore` subtracts only
+those — letters you set by hand survive. **Nothing here happens automatically:**
+the daemon never touches this setting, because the change only takes effect
+when the shell restarts and so could not be honestly undone when YKeys stops.
+Add `--restart-shell` to restart Explorer now, or sign out later.
+
+Two limits worth knowing. Only letters can be released this way — `Win+1` and
+`Win+;` cannot. And several chords belong to components other than Explorer
+(Copilot, Game Bar, Settings, Widgets, Quick Settings) which ignore the setting
+entirely; `status` probes each chord live and tells you which are genuinely free.
+
 ## Install
 
 Bundled with YTile — installing YTile gives you ykeys. Standalone: grab
