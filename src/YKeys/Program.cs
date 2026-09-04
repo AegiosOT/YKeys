@@ -34,6 +34,16 @@ internal static class Program
                   --log    write output to %LOCALAPPDATA%\ykeys\ykeys.log instead
                            of the console (used when launched by `ytile start`)
 
+                A binding that starts with "@signal:" pokes an app that is already
+                running instead of starting a process — no image load, so it costs
+                microseconds rather than the ~20 ms a spawn does:
+
+                  "alt+space": "@signal:YSpot.Signal"      window class
+                  "win+v":     "@signal:YSpot.Signal#3"    ...and which action
+
+                The app must be running; if it is not, the chord logs and does
+                nothing until it is.
+
                 Windows keeps several Win+<letter> chords for itself, so binding
                 them here is refused until they are handed back:
 
