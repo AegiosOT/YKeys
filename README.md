@@ -72,6 +72,19 @@ message. Microseconds, no process.
 If the app is not running, the chord logs a line saying so and does nothing;
 start the app and the same chord starts working, no reload needed.
 
+To check a target without binding a key to it:
+
+```
+ykeys signal YSpot.Signal        # send it once, and say what happened
+```
+
+That takes exactly the same path the hotkey does, so "nothing is listening on
+window class ..." from here means the same thing it would mean from a chord.
+One thing it cannot tell you: pressing the bound chord is what makes YKeys the
+process Windows will let take the foreground, and running the command from a
+shell does not — so a target may appear without focus here and be perfectly
+fine from the real hotkey.
+
 **Writing an app that accepts signals.** Create a message-only window
 (`CreateWindowEx` with `HWND_MESSAGE` as the parent) whose class is the name you
 tell people to put in their config, and handle the message id you get from

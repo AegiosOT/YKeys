@@ -18,6 +18,11 @@ internal static class Program
             return ShellHotkeys.Run(args[1..]);
         }
 
+        if (args.Length > 0 && args[0] == "signal")
+        {
+            return SendOneSignal(args[1..]);
+        }
+
         if (args.Contains("--help") || args.Contains("-h"))
         {
             Console.WriteLine(
@@ -25,6 +30,7 @@ internal static class Program
                 ykeys {Version} — hotkey daemon for Windows (companion to YTile)
 
                 usage: ykeys [--log]
+                       ykeys signal <WindowClass>[#code]
                        ykeys shell-hotkeys <status|disable|restore> [LETTERS] [--restart-shell]
 
                 Reads ~/.config/ykeys/ykeys.json and registers its "hotkeys" map as
@@ -42,7 +48,9 @@ internal static class Program
                   "win+v":     "@signal:YSpot.Signal#3"    ...and which action
 
                 The app must be running; if it is not, the chord logs and does
-                nothing until it is.
+                nothing until it is. To check one without binding a key:
+
+                  ykeys signal YSpot.Signal      send it once, and say what happened
 
                 Windows keeps several Win+<letter> chords for itself, so binding
                 them here is refused until they are handed back:
@@ -183,4 +191,40 @@ internal static class Program
     /// <summary>One timestamped writer for the whole daemon: a log that mixes
     /// stamped and unstamped lines is hard to correlate with anything else.</summary>
     internal static void Log(string message) => Console.WriteLine($"{DateTime.Now:MM-dd HH:mm:ss.fff} {message}");
+
+    /// `ykeys signal <class>[#code]` — send one signal and report.
+    ///
+    /// The diagnostic for "my @signal binding does nothing", which otherwise
+    /// means pressing a key and reading a log to find out whether the window
+    /// was even there. It is also the only way to exercise the whole delivery
+    /// path without synthesising a keypress, which is why it exists at all.
+    ///
+    /// One thing it CANNOT tell you: the foreground hand-off. Pressing the
+    /// bound chord is what makes ykeys the process Windows lets take the
+    /// foreground, and running this from a shell does not, so a target that
+    /// shows a window may show it without focus here and be perfectly fine
+    /// from the real hotkey.
+    private static int SendOneSignal(string[] args)
+    {
+        if (args.Length != 1 || args[0].StartsWith('-'))
+        {
+            Console.Error.WriteLine("usage: ykeys signal <WindowClass>[#code]");
+            return 2;
+        }
+
+        string spec = SignalSender.Prefix + args[0];
+        if (!SignalSender.TryParse(spec, out SignalTarget? target, out string? error))
+        {
+            Console.Error.WriteLine($"ykeys: {error}");
+            return 2;
+        }
+
+        if (!SignalSender.TrySend("signal", target!, out string? failure))
+        {
+            Console.Error.WriteLine($"ykeys: {failure}");
+            return 1;
+        }
+        Console.WriteLine($"signalled {target!.WindowClass} with code {target.Code}");
+        return 0;
+    }
 }

@@ -105,12 +105,26 @@ internal static unsafe class SignalSender
     /// </summary>
     public static void Send(string chord, SignalTarget target)
     {
+        if (!TrySend(chord, target, out string? failure))
+        {
+            Log($"hotkey '{chord}': {failure}");
+        }
+    }
+
+    /// <summary>
+    /// The delivery itself, shared with <c>ykeys signal</c> so the diagnostic and
+    /// the hotkey exercise exactly the same path — a diagnostic that took a
+    /// different route would be worth very little.
+    /// </summary>
+    public static bool TrySend(string chord, SignalTarget target, out string? failure)
+    {
+        failure = null;
         HWND hwnd = Find(target.WindowClass);
         if (hwnd.IsNull)
         {
-            Log($"hotkey '{chord}': nothing is listening on window class "
-                + $"'{target.WindowClass}' — is the app running?");
-            return;
+            failure = $"nothing is listening on window class '{target.WindowClass}' "
+                + "— is the app running?";
+            return false;
         }
 
         // The whole reason a launcher can be summoned by someone else's hotkey.
@@ -128,22 +142,26 @@ internal static unsafe class SignalSender
             s_message = PInvoke.RegisterWindowMessage(MessageName);
             if (s_message == 0)
             {
-                Log($"hotkey '{chord}': could not register the '{MessageName}' message");
-                return;
+                failure = $"could not register the '{MessageName}' message";
+                return false;
             }
         }
 
         if (!PInvoke.PostMessage(hwnd, s_message, (WPARAM)target.Code, default))
         {
-            Log($"hotkey '{chord}': could not post to '{target.WindowClass}'");
-            return;
+            failure = $"could not post to '{target.WindowClass}'";
+            return false;
         }
 
         if (!granted)
         {
-            Log($"hotkey '{chord}': signalled '{target.WindowClass}', but Windows refused "
-                + "the foreground hand-off — the window may appear without focus");
+            // Not a failure: the post landed. Expected when this runs from a
+            // shell rather than from WM_HOTKEY, and worth saying either way —
+            // it is the one symptom that otherwise reads as the target's bug.
+            Log($"'{chord}': signalled '{target.WindowClass}', but Windows refused the "
+                + "foreground hand-off — the window may appear without focus");
         }
+        return true;
     }
 
     /// <summary>
