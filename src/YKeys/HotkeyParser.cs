@@ -4,9 +4,19 @@ namespace YKeys;
 
 /// <summary>
 /// A parsed hotkey: the chord as written (for messages), the RegisterHotKey
-/// arguments, and the command line the binding runs.
+/// arguments, and what the binding does when pressed.
+///
+/// <para><see cref="Signal"/> is set for an <c>@signal:</c> binding, which pokes
+/// an app that is already running instead of starting a process.
+/// <see cref="CommandLine"/> is kept either way, because it is what the log
+/// prints and what the user actually wrote.</para>
 /// </summary>
-internal sealed record HotkeyBinding(string Chord, HOT_KEY_MODIFIERS Modifiers, uint VirtualKey, string CommandLine);
+internal sealed record HotkeyBinding(
+    string Chord,
+    HOT_KEY_MODIFIERS Modifiers,
+    uint VirtualKey,
+    string CommandLine,
+    SignalTarget? Signal = null);
 
 internal static class HotkeyParser
 {

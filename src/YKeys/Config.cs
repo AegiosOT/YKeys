@@ -104,7 +104,18 @@ internal sealed class YKeysConfig
                 problems.Add($"hotkey '{chord}' duplicates an earlier binding");
                 continue;
             }
-            hotkeys.Add(new HotkeyBinding(chord, mods, vk, command.Trim()));
+            string commandLine = command.Trim();
+            SignalTarget? signal = null;
+            if (SignalSender.IsSignal(commandLine)
+                && !SignalSender.TryParse(commandLine, out signal, out string? signalError))
+            {
+                // Validated here rather than on the first press: a typo in a
+                // signal target would otherwise register fine and do nothing
+                // at all, which is the failure that looks like a dead chord.
+                problems.Add($"hotkey '{chord}': {signalError}");
+                continue;
+            }
+            hotkeys.Add(new HotkeyBinding(chord, mods, vk, commandLine, signal));
         }
 
         if (problems.Count > 0)

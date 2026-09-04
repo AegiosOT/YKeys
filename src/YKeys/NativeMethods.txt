@@ -19,3 +19,11 @@ DestroyWindow
 DefWindowProcW
 GetModuleHandleW
 WM_QUIT
+
+// Signalling an already-running app ("@signal:" bindings)
+FindWindowW
+FindWindowExW
+GetWindowThreadProcessId
+AllowSetForegroundWindow
+PostMessageW
+RegisterWindowMessageW

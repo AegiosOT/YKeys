@@ -45,6 +45,42 @@ program path if it contains spaces. Config changes are picked up automatically;
 no restart needed, and a half-saved or malformed file leaves your existing
 bindings alone rather than unregistering everything.
 
+## Signalling an app that is already running
+
+Starting a process costs about 8 ms at the median and 20 ms at the 95th
+percentile on a warm machine — even for a program that does nothing at all,
+because that is what loading an image costs. For "run this thing", nobody
+notices. For "show the launcher I already have open", that *is* the delay.
+
+So a binding can poke a running app instead of starting one:
+
+```json
+{
+  "hotkeys": {
+    "alt+space": "@signal:YSpot.Signal",
+    "win+v": "@signal:YSpot.Signal#3"
+  }
+}
+```
+
+The name after `@signal:` is a **window class**; the optional `#n` is a number
+passed along to say which of the app's actions you mean (what the numbers mean
+is up to the app — YSpot's are 0 toggle, 1 show, 2 settings, 3 clipboard).
+YKeys finds the window, hands it the right to take the foreground, and posts a
+message. Microseconds, no process.
+
+If the app is not running, the chord logs a line saying so and does nothing;
+start the app and the same chord starts working, no reload needed.
+
+**Writing an app that accepts signals.** Create a message-only window
+(`CreateWindowEx` with `HWND_MESSAGE` as the parent) whose class is the name you
+tell people to put in their config, and handle the message id you get from
+`RegisterWindowMessage("YKeysSignal")` — `wParam` is the number after `#`. That
+is the whole protocol. Take the foreground from the window procedure if you have
+a window to show: YKeys has already called `AllowSetForegroundWindow` for you,
+which is what makes `SetForegroundWindow` succeed even though the keypress went
+to a different process.
+
 Hotkeys are registered with `RegisterHotKey`, so they keep working even while
 an elevated window has focus, and a chord some other program already owns is
 skipped with a log line naming it rather than silently swallowed.

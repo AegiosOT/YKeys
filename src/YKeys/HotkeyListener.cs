@@ -171,7 +171,17 @@ internal static unsafe class HotkeyListener
                 // command did nothing" — the ambiguity behind every hotkey
                 // mystery worth debugging.
                 Log($"hotkey '{binding.Chord}' -> {binding.CommandLine}");
-                CommandRunner.Run(binding.Chord, binding.CommandLine);
+                if (binding.Signal is { } signal)
+                {
+                    // Inline, unlike a spawn: posting a message cannot block,
+                    // and the foreground hand-off inside must happen while this
+                    // WM_HOTKEY is still the last input event.
+                    SignalSender.Send(binding.Chord, signal);
+                }
+                else
+                {
+                    CommandRunner.Run(binding.Chord, binding.CommandLine);
+                }
             }
         }
         catch
